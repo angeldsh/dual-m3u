@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reproductor HLS Dual Sincronizado | Video & Audio Separados</title>
+  <meta name="description" content="Reproductor de streams HLS (.m3u8) con sincronización independiente de pistas de vídeo y audio en tiempo real usando hls.js.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles.css">
+  
+  <!-- HLS.js library -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo-container">
+        <div class="logo-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m16 13 5-3-5-3v6z"/>
+            <rect width="13" height="14" x="2" y="5" rx="2"/>
+            <path d="M12 19v2"/>
+            <path d="M8 21h8"/>
+          </svg>
+        </div>
+        <div>
+          <h1>HLS DualSync Player</h1>
+          <p class="subtitle">Reproducción y sincronización de streams HLS de vídeo y audio independientes</p>
+        </div>
+      </div>
+
+      <div class="header-badges">
+        <span class="badge badge-pulse" id="global-status-badge">
+          <span class="dot"></span>
+          <span id="global-status-text">Listo</span>
+        </span>
+      </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="main-layout">
+      <!-- Input Panel -->
+      <section class="panel input-panel">
+        <div class="panel-header">
+          <h2 class="panel-title">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+            </svg>
+            Fuentes HLS (.m3u8)
+          </h2>
+          <div class="preset-actions">
+            <button id="btn-clear-inputs" class="btn btn-ghost btn-sm" title="Limpiar campos">
+              Limpiar
+            </button>
+          </div>
+        </div>
+
+        <form id="stream-form" onsubmit="return false;">
+          <div class="input-group">
+            <label for="video-url">
+              <span class="label-icon video-color">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="23 7 16 12 23 17 23 7"/>
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                </svg>
+              </span>
+              URL Stream de Vídeo (.m3u8)
+            </label>
+            <div class="input-wrapper">
+              <input 
+                type="url" 
+                id="video-url" 
+                placeholder="https://servidor/stream-video.m3u8"
+                required
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <span class="status-indicator" id="video-input-status" title="Estado de fuente de vídeo">
+                <span class="status-badge" id="v-status-badge">Desconectado</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label for="audio-url">
+              <span class="label-icon audio-color">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 18V5l12-2v13"/>
+                  <circle cx="6" cy="18" r="3"/>
+                  <circle cx="18" cy="16" r="3"/>
+                </svg>
+              </span>
+              URL Stream de Audio (.m3u8)
+            </label>
+            <div class="input-wrapper">
+              <input 
+                type="url" 
+                id="audio-url" 
+                placeholder="https://servidor/stream-audio.m3u8"
+                required
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <span class="status-indicator" id="audio-input-status" title="Estado de fuente de audio">
+                <span class="status-badge" id="a-status-badge">Desconectado</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" id="btn-play-load" class="btn btn-primary btn-lg">
+              <svg class="icon icon-play" viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+              <span id="btn-play-text">Cargar y Reproducir</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Player View Panel -->
+      <section class="panel player-panel">
+        <!-- Media Container -->
+        <div class="video-container" id="video-container">
+          <video id="v-player" playsinline preload="auto" title="Reproductor de vídeo"></video>
+          <!-- Hidden Audio Element for external audio track -->
+          <audio id="a-player" preload="auto"></audio>
+
+          <!-- Watermark / Overlay status when idle or loading -->
+          <div class="video-overlay" id="video-overlay">
+            <div class="overlay-content">
+              <div class="play-big-btn" id="overlay-play-btn">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+              </div>
+              <p id="overlay-message">Pega las URLs de vídeo y audio y pulsa Play para iniciar</p>
+            </div>
+          </div>
+
+          <!-- Top Stream Overlay Bar -->
+          <div class="stream-top-bar">
+            <div class="sync-pill" id="sync-pill" title="Diferencia de tiempo entre audio y vídeo">
+              <span class="sync-dot"></span>
+              <span id="sync-status-label">Sin Stream</span>
+              <span class="sync-diff" id="sync-diff-label">0 ms</span>
+            </div>
+            
+            <div class="audio-wave-visualizer" id="audio-visualizer" title="Pista de audio externa activa">
+              <span></span><span></span><span></span><span></span>
+            </div>
+          </div>
+
+          <!-- Custom Player Controls Bar -->
+          <div class="controls-overlay" id="controls-overlay">
+            <!-- Scrub Bar -->
+            <div class="scrub-container">
+              <div class="buffer-bar" id="buffer-bar"></div>
+              <input type="range" id="seek-bar" min="0" max="100" value="0" step="0.1" aria-label="Seeker">
+            </div>
+
+            <!-- Controls Row -->
+            <div class="controls-row">
+              <div class="controls-left">
+                <!-- Play/Pause -->
+                <button class="ctrl-btn" id="ctrl-play-pause" title="Reproducir / Pausar (Espacio)">
+                  <svg id="icon-play" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                  </svg>
+                  <svg id="icon-pause" class="hidden" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="6" y="4" width="4" height="16"/>
+                    <rect x="14" y="4" width="4" height="16"/>
+                  </svg>
+                </button>
+
+                <!-- Time display -->
+                <div class="time-display">
+                  <span id="time-current">00:00</span>
+                  <span class="time-separator">/</span>
+                  <span id="time-duration">00:00</span>
+                </div>
+              </div>
+
+              <div class="controls-center">
+                <!-- Sync Health Badge -->
+                <button class="btn btn-ghost btn-xs" id="btn-force-sync" title="Forzar sincronización inmediata de tiempos">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                  </svg>
+                  Sincronizar Ya
+                </button>
+              </div>
+
+              <div class="controls-right">
+                <!-- Volume / Mute -->
+                <div class="volume-container">
+                  <button class="ctrl-btn" id="ctrl-mute" title="Silenciar / Activar sonido">
+                    <svg id="icon-vol-high" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                    </svg>
+                    <svg id="icon-vol-mute" class="hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                      <line x1="23" y1="9" x2="17" y2="15"/>
+                      <line x1="17" y1="9" x2="23" y2="15"/>
+                    </svg>
+                  </button>
+                  <input type="range" id="vol-slider" min="0" max="1" step="0.05" value="1" aria-label="Volumen">
+                </div>
+
+                <!-- Settings / Sync Tolerance -->
+                <select id="sync-tolerance-select" class="select-sm" title="Tolerancia de desfasaje para auto-sincronizar">
+                  <option value="0.05">Sync Estricto (50ms)</option>
+                  <option value="0.1" selected>Sync Normal (100ms)</option>
+                  <option value="0.25">Sync Relajado (250ms)</option>
+                </select>
+
+                <!-- Fullscreen -->
+                <button class="ctrl-btn" id="ctrl-fullscreen" title="Pantalla completa">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Real-Time Metrics & Diagnostics Panel -->
+        <div class="metrics-card">
+          <div class="metric-item">
+            <span class="metric-label">Desfasaje Audio/Vídeo</span>
+            <span class="metric-value" id="m-offset">0.00 ms</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Buffer Vídeo</span>
+            <span class="metric-value" id="m-v-buffer">0.0s</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Buffer Audio</span>
+            <span class="metric-value" id="m-a-buffer">0.0s</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Ajuste de Velocidad</span>
+            <span class="metric-value" id="m-rate">1.00x</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>HLS DualSync Engine con <code>hls.js</code>. Compatible con navegadores basados en Chromium (Brave, Chrome, Edge) y Firefox.</p>
+    </footer>
+  </div>
+
+  <script src="sync-engine.js"></script>
+</body>
+</html>
