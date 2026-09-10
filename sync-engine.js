@@ -1,5 +1,5 @@
 /**
- * HLS DualSync Engine - English Version
+ * HLS DualSync Engine
  * Dual HLS Video & Audio Synchronization Engine for Web Browsers
  */
 
@@ -174,7 +174,10 @@
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
     if (btnThemeToggle) {
-      btnThemeToggle.setAttribute('aria-checked', theme === 'light' ? 'true' : 'false');
+      const isDark = theme === 'dark';
+      btnThemeToggle.setAttribute('aria-checked', isDark ? 'true' : 'false');
+      btnThemeToggle.setAttribute('title', isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro');
+      btnThemeToggle.setAttribute('aria-label', isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro');
     }
   }
 
